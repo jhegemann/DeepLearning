@@ -68,11 +68,11 @@ public:
     e_ = o - t;
     d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
     db_[n_ - 1] = d_[n_ - 1];
-    dw_[n_ - 1] = CartesianProduct(z_[n_ - 2], d_[n_ - 1]);
+    dw_[n_ - 1] = CartesianProduct(a_[n_ - 2], d_[n_ - 1]);
     for (size_t i = n_ - 2; i >= 1; i--) {
       d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
       db_[i] = d_[i];
-      dw_[i] = CartesianProduct(z_[i - 1], d_[i]);
+      dw_[i] = CartesianProduct(a_[i - 1], d_[i]);
     }
     d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
     db_[0] = d_[0];
