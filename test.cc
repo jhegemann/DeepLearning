@@ -34,14 +34,14 @@ int main(int argc, char **argv) {
   std::vector<Vector> inputs;
   std::vector<Vector> outputs;
 
-  for (double x = -M_PI; x <= M_PI; x += 1.0e-1) {
+  for (double x = -M_PI; x <= M_PI; x += 1.0e-2) {
     inputs.emplace_back(1);
     inputs.back()(0) = x;
     outputs.emplace_back(1);
     outputs.back()(0) = 0.5 + 0.25 * sin(x);
   }
 
-  net.Train(inputs, outputs, 10000);
+  net.Train(inputs, outputs, 1000);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);
