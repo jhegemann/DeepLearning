@@ -52,8 +52,8 @@ public:
     }
   }
 
-  const Vector &ForwardPass(const Vector &i) {
-    z_[0] = w_[0] * i + b_[0];
+  const Vector &ForwardPass(const Vector &in) {
+    z_[0] = w_[0] * in + b_[0];
     a_[0] = z_[0].Apply(S);
     p_[0] = a_[0].Apply(SD);
     for (size_t i = 1; i < n_; i++) {
@@ -64,19 +64,19 @@ public:
     return a_.back();
   }
 
-  void BackwardPass(const Vector &i, const Vector &o, const Vector &t) {
+  void BackwardPass(const Vector &in, const Vector &o, const Vector &t) {
     e_ = o - t;
     d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
     db_[n_ - 1] = d_[n_ - 1];
-    dw_[n_ - 1] = DyadicProduct(a_[n_ - 2], d_[n_ - 1]);
+    dw_[n_ - 1] = DyadicProduct(d_[n_ - 1], a_[n_ - 2]);
     for (size_t i = n_ - 2; i >= 1; i--) {
       d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
       db_[i] = d_[i];
-      dw_[i] = DyadicProduct(a_[i - 1], d_[i]);
+      dw_[i] = DyadicProduct(d_[i], a_[i - 1]);
     }
     d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
     db_[0] = d_[0];
-    dw_[0] = DyadicProduct(i, d_[0]);
+    dw_[0] = DyadicProduct(d_[0], in);
   }
 
   void ApplyUpdate() {
@@ -89,7 +89,6 @@ public:
   }
 
   void Shuffle(std::vector<Vector> &is, std::vector<Vector> &ts) {
-    assert(is.size() == ts.size());
     size_t j;
     for (size_t i = 0; i < is.size(); i++) {
       j = i + g_.Uint64() % (is.size() - i);

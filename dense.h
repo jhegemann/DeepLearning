@@ -23,7 +23,6 @@ SOFTWARE. */
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -316,7 +315,6 @@ void Matrix::Zero() {
 }
 
 void Matrix::One() {
-  assert(m_ == n_);
   Zero();
   for (size_t i = 0; i < m_; i++) {
     (*this)(i, i) = 1.0;
@@ -391,7 +389,6 @@ const Vector operator*(const Vector &x, const double a) {
 const Vector operator*(const double a, const Vector &x) { return x * a; }
 
 const double operator*(const Vector &x, const Vector &y) {
-  assert(x.Dim() == y.Dim());
   double p = 0.0;
   for (size_t i = 0; i < x.Dim(); i++) {
     p += x(i) * y(i);
@@ -400,7 +397,6 @@ const double operator*(const Vector &x, const Vector &y) {
 }
 
 const Vector operator+(const Vector &x, const Vector &y) {
-  assert(x.Dim() == y.Dim());
   Vector s(x);
   for (size_t i = 0; i < x.Dim(); i++) {
     s(i) += y(i);
@@ -409,7 +405,6 @@ const Vector operator+(const Vector &x, const Vector &y) {
 }
 
 const Vector operator-(const Vector &x, const Vector &y) {
-  assert(x.Dim() == y.Dim());
   Vector s(x);
   for (size_t i = 0; i < x.Dim(); i++) {
     s(i) -= y(i);
@@ -430,7 +425,6 @@ const Matrix operator*(const Matrix &m, const double a) {
 const Matrix operator*(const double a, const Matrix &m) { return m * a; }
 
 const Matrix operator*(const Matrix &m, const Matrix &n) {
-  assert(m.Cols() == n.Rows());
   Matrix p(m.Rows(), n.Cols());
   for (size_t i = 0; i < m.Rows(); i++) {
     for (size_t j = 0; j < n.Cols(); j++) {
@@ -443,8 +437,6 @@ const Matrix operator*(const Matrix &m, const Matrix &n) {
 }
 
 const Matrix operator+(const Matrix &m, const Matrix &n) {
-  assert(m.Cols() == n.Cols());
-  assert(m.Rows() == n.Rows());
   Matrix a(m);
   for (size_t i = 0; i < a.Rows(); i++) {
     for (size_t j = 0; j < a.Cols(); j++) {
@@ -455,8 +447,6 @@ const Matrix operator+(const Matrix &m, const Matrix &n) {
 }
 
 const Matrix operator-(const Matrix &m, const Matrix &n) {
-  assert(m.Cols() == n.Cols());
-  assert(m.Rows() == n.Rows());
   Matrix s(m);
   for (size_t i = 0; i < s.Rows(); i++) {
     for (size_t j = 0; j < s.Cols(); j++) {
@@ -467,7 +457,6 @@ const Matrix operator-(const Matrix &m, const Matrix &n) {
 }
 
 const Vector operator*(const Matrix &m, const Vector &x) {
-  assert(m.Cols() == x.Dim());
   Vector p(m.Rows());
   for (size_t i = 0; i < m.Rows(); i++) {
     for (size_t j = 0; j < m.Cols(); j++) {
@@ -478,7 +467,6 @@ const Vector operator*(const Matrix &m, const Vector &x) {
 }
 
 const Vector HadamardProduct(const Vector &x, const Vector &y) {
-  assert(x.Dim() == y.Dim());
   Vector p(x.Dim());
   for (size_t i = 0; i < p.Dim(); i++) {
     p(i) = x(i) * y(i);
@@ -487,10 +475,10 @@ const Vector HadamardProduct(const Vector &x, const Vector &y) {
 }
 
 const Matrix DyadicProduct(const Vector &x, const Vector &y) {
-  Matrix p(y.Dim(), x.Dim());
-  for (size_t i = 0; i < y.Dim(); i++) {
-    for (size_t j = 0; j < x.Dim(); j++) {
-      p(i, j) = x(j) * y(i);
+  Matrix p(x.Dim(), y.Dim());
+  for (size_t i = 0; i < x.Dim(); i++) {
+    for (size_t j = 0; j < y.Dim(); j++) {
+      p(i, j) = x(i) * y(j);
     }
   }
   return p;
