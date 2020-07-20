@@ -68,15 +68,15 @@ public:
     e_ = o - t;
     d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
     db_[n_ - 1] = d_[n_ - 1];
-    dw_[n_ - 1] = CartesianProduct(a_[n_ - 2], d_[n_ - 1]);
+    dw_[n_ - 1] = DyadicProduct(a_[n_ - 2], d_[n_ - 1]);
     for (size_t i = n_ - 2; i >= 1; i--) {
       d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
       db_[i] = d_[i];
-      dw_[i] = CartesianProduct(a_[i - 1], d_[i]);
+      dw_[i] = DyadicProduct(a_[i - 1], d_[i]);
     }
     d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
     db_[0] = d_[0];
-    dw_[0] = CartesianProduct(i, d_[0]);
+    dw_[0] = DyadicProduct(i, d_[0]);
   }
 
   void ApplyUpdate() {
@@ -99,17 +99,18 @@ public:
   }
 
   void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs) {
-    assert(inputs.size() == targets.size());
+    Vector output;
     for (size_t i = 0; i < epochs; i++) {
       Shuffle(inputs, targets);
       double error = 0.0;
       for (size_t j = 0; j < inputs.size(); j++) {
-        BackwardPass(inputs[j], ForwardPass(inputs[j]), targets[j]);
+        output = ForwardPass(inputs[j]);
+        BackwardPass(inputs[j], output, targets[j]);
         error += e_ * e_;
         ApplyUpdate();
       }
       error /= (double)inputs.size();
-      printf("epoch %ld - training error: %f\n", i, error);
+      printf("epoch %ld - training error: %e\n", i, error);
     }
   }
 

@@ -486,7 +486,7 @@ const Vector HadamardProduct(const Vector &x, const Vector &y) {
   return p;
 }
 
-const Matrix CartesianProduct(const Vector &x, const Vector &y) {
+const Matrix DyadicProduct(const Vector &x, const Vector &y) {
   Matrix p(y.Dim(), x.Dim());
   for (size_t i = 0; i < y.Dim(); i++) {
     for (size_t j = 0; j < x.Dim(); j++) {
