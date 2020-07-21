@@ -1,2 +1,2 @@
 # deep-learning
-Simple implementation of backpropagation algorithm with SGD (batch size 1). Implementation does not aim for performance, but to be simple and comprehensible.
+Implementation of the backpropagation algorithm (fully connected layers, sigmoid activation, adam optimization, full size gradient). When compiling with `gcc` use `-O3` option for best performance.

@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     outputs.back()(0) = 0.5 + 0.25 * sin(x);
   }
 
-  net.Train(inputs, outputs, 1000);
+  net.Train(inputs, outputs, 2500);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);

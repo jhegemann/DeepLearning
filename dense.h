@@ -84,7 +84,7 @@ public:
   void Shape(const size_t d);
   void Zero();
   void One();
-  void Random();
+  void Random(RandomGenerator g, double min, double max);
   Vector &operator=(const Vector &x);
   Vector &operator=(const std::vector<double> &x);
   Vector &operator=(Vector &&x);
@@ -145,10 +145,9 @@ void Vector::One() {
   }
 }
 
-void Vector::Random() {
-  RandomGenerator g;
+void Vector::Random(RandomGenerator g, double min, double max) {
   for (size_t i = 0; i < x_.size(); i++) {
-    x_[i] = g.Uniform() * 2.0 - 1.0;
+    x_[i] = g.Uniform() * (max - min) + min;
   }
 }
 
@@ -258,7 +257,8 @@ public:
   void Shape(const size_t m, const size_t n);
   void Zero();
   void One();
-  void Random();
+  void Random(RandomGenerator g, double min, double max);
+  Matrix Apply(std::function<double(double)> f);
   Matrix &operator=(const Matrix &x);
   Matrix &operator=(Matrix &&x);
   const double &operator()(const size_t i, const size_t j) const;
@@ -321,11 +321,20 @@ void Matrix::One() {
   }
 }
 
-void Matrix::Random() {
-  RandomGenerator g;
+void Matrix::Random(RandomGenerator g, double min, double max) {
   for (size_t i = 0; i < x_.size(); i++) {
-    x_[i] = g.Uniform() * 2.0 - 1.0;
+    x_[i] = g.Uniform() * (max - min) + min;
   }
+}
+
+Matrix Matrix::Apply(std::function<double(double)> f) {
+  Matrix x(m_, n_);
+  for (size_t i = 0; i < m_; i++) {
+    for (size_t j = 0; j < n_; j++) {
+      x(i, j) = f((*this)(i, j));
+    }
+  }
+  return x;
 }
 
 Matrix &Matrix::operator=(const Matrix &x) {
@@ -470,6 +479,16 @@ const Vector HadamardProduct(const Vector &x, const Vector &y) {
   Vector p(x.Dim());
   for (size_t i = 0; i < p.Dim(); i++) {
     p(i) = x(i) * y(i);
+  }
+  return p;
+}
+
+const Matrix HadamardProduct(const Matrix &x, const Matrix &y) {
+  Matrix p(x.Rows(), x.Cols());
+  for (size_t i = 0; i < p.Rows(); i++) {
+    for (size_t j = 0; j < p.Cols(); j++) {
+      p(i, j) = x(i, j) * y(i, j);
+    }
   }
   return p;
 }
