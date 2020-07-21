@@ -61,7 +61,11 @@ public:
     }
   }
 
-  const Vector &ForwardPass(const Vector &in) {
+  const Vector &Output() {
+    return a_.back();
+  }
+
+  void ForwardPass(const Vector &in) {
     z_[0] = w_[0] * in + b_[0];
     a_[0] = z_[0].Apply(S);
     p_[0] = a_[0].Apply(SD);
@@ -70,7 +74,6 @@ public:
       a_[i] = z_[i].Apply(S);
       p_[i] = a_[i].Apply(SD);
     }
-    return a_.back();
   }
 
   void BackwardPass(const Vector &in, const Vector &o, const Vector &t, size_t n) {
@@ -114,15 +117,6 @@ public:
     }
   }
 
-  void Shuffle(std::vector<Vector> &is, std::vector<Vector> &ts) {
-    size_t j;
-    for (size_t i = 0; i < is.size(); i++) {
-      j = i + g_.Uint64() % (is.size() - i);
-      std::swap(is[i], is[j]);
-      std::swap(ts[i], ts[j]);
-    }
-  }
-
   void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs) {
     beta1_t_ = beta1_;
     beta2_t_ = beta2_;
@@ -131,8 +125,8 @@ public:
       ZeroUpdate();
       double error = 0.0;
       for (size_t j = 0; j < inputs.size(); j++) {
-        output = ForwardPass(inputs[j]);
-        BackwardPass(inputs[j], output, targets[j], inputs.size());
+        ForwardPass(inputs[j]);
+        BackwardPass(inputs[j], Output(), targets[j], inputs.size());
         error += e_ * e_;
       }
       error /= (double)inputs.size();
