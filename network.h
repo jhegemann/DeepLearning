@@ -193,7 +193,6 @@ public:
       }
       double total_error = error / inputs.size();
       printf("epoch %ld - training error: %e\n", i, total_error);
-      
     }
   }
 
