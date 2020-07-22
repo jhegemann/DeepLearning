@@ -26,6 +26,9 @@ SOFTWARE. */
 #include <ctime>
 #include "dense.h"
 
+#define OPTIMIZER_SGD 0
+#define OPTIMIZER_ADAM 1
+
 static double S(double x) { return 1.0 / (1.0 + exp(-x)); }
 static double SD(double s) { return s * (1.0 - s); }
 
@@ -131,20 +134,66 @@ public:
     }
   }
 
-  double Error(size_t batch_size) {
-    return rms_ / batch_size;
+  double Error() {
+    return rms_;
   }
 
-  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs, size_t batch_size) {
-    Vector output;
-    for (size_t i = 0; i < epochs; i++) {
-      PrepareStep();
-      for (size_t j = 0; j < inputs.size(); j++) {
-        ForwardPass(inputs[j]);
-        BackwardPass(targets[j]);
+  void PrepareBatches(std::vector<Vector> &inputs) {
+    indices_.resize(inputs.size());
+    for (size_t i = 0; i < inputs.size(); i++) {
+      indices_[i] = i;
+    }
+  }
+
+  void SampleBatches(size_t batch_size) {
+    for (size_t i = 0; i < indices_.size(); i++) {
+      size_t j = g_.Uint64() % (indices_.size() - i) + i;
+      std::swap(indices_[i], indices_[j]);
+    }
+    size_t count = indices_.size() / batch_size;
+    size_t residual = indices_.size() % batch_size;
+    batches_.resize(count);
+    for (size_t i = 0; i < count; i++) {
+      std::vector<size_t> batch(batch_size);
+      for (size_t j = 0; j < batch_size; j++) {
+        batch[j] = indices_[i * batch_size + j];
       }
-      printf("epoch %ld - training error: %e\n", i, Error(inputs.size()));
-      Adam(inputs.size());
+      batches_[i] = batch;
+    } 
+    if (residual > 0) {
+      std::vector<size_t> batch(residual); 
+      for (size_t i = 0; i < residual; i++) {
+        batch[i] = indices_[count * batch_size + i];
+      }
+      batches_.emplace_back(batch);
+    }
+  }
+
+  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs, size_t batch_size, int optimizer) {
+    Vector output;
+    PrepareBatches(inputs);
+    for (size_t i = 0; i < epochs; i++) {
+      SampleBatches(batch_size);
+      double error = 0.0;
+      for (size_t i = 0; i < batches_.size(); i++) {
+        PrepareStep();
+        std::vector<size_t> batch = batches_[i];
+        for (size_t j = 0; j < batch.size(); j++) {
+          ForwardPass(inputs[batch[j]]);
+          BackwardPass(targets[batch[j]]);
+        }
+        if (optimizer == OPTIMIZER_SGD) {
+          SGD(batch_size);
+        } else if (optimizer == OPTIMIZER_ADAM) {
+          Adam(batch_size);
+        } else {
+          abort();
+        }
+        error += Error();
+      }
+      double total_error = error / inputs.size();
+      printf("epoch %ld - training error: %e\n", i, total_error);
+      
     }
   }
 
@@ -161,6 +210,8 @@ private:
   Vector i_;
   Vector t_;
   Vector e_;
+  std::vector<size_t> indices_;
+  std::vector<std::vector<size_t>> batches_;
   std::vector<Vector> d_;
   std::vector<Vector> z_;
   std::vector<Vector> a_;
