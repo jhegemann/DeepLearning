@@ -32,6 +32,8 @@ static double SD(double s) { return s * (1.0 - s); }
 class NeuralNetwork {
 public:
   NeuralNetwork() {
+    beta1_t_ = beta1_;
+    beta2_t_ = beta2_;
     g_.Seed(time(nullptr));
   }
 
@@ -65,6 +67,10 @@ public:
     return a_.back();
   }
 
+  const Vector &Error() {
+    return e_;
+  }
+
   void ForwardPass(const Vector &in) {
     z_[0] = w_[0] * in + b_[0];
     a_[0] = z_[0].Apply(S);
@@ -80,15 +86,15 @@ public:
     e_ = o - t;
     d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
     db_[n_ - 1] = db_[n_ - 1] + (1.0 / n) * d_[n_ - 1];
-    dw_[n_ - 1] = dw_[n_ - 1] + (1.0 / n) * DyadicProduct(d_[n_ - 1], a_[n_ - 2]);
+    dw_[n_ - 1] = dw_[n_ - 1] + (1.0 / n) * OuterProduct(d_[n_ - 1], a_[n_ - 2]);
     for (size_t i = n_ - 2; i >= 1; i--) {
       d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
       db_[i] = db_[i] + (1.0 / n) * d_[i];
-      dw_[i] = dw_[i] + (1.0 / n) * DyadicProduct(d_[i], a_[i - 1]);
+      dw_[i] = dw_[i] + (1.0 / n) * OuterProduct(d_[i], a_[i - 1]);
     }
     d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
     db_[0] = db_[0] + (1.0 / n) * d_[0];
-    dw_[0] = dw_[0] + (1.0 / n) * DyadicProduct(d_[0], in);
+    dw_[0] = dw_[0] + (1.0 / n) * OuterProduct(d_[0], in);
   }
 
   void ZeroUpdate() {
@@ -118,8 +124,6 @@ public:
   }
 
   void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs) {
-    beta1_t_ = beta1_;
-    beta2_t_ = beta2_;
     Vector output;
     for (size_t i = 0; i < epochs; i++) {
       ZeroUpdate();
@@ -127,7 +131,7 @@ public:
       for (size_t j = 0; j < inputs.size(); j++) {
         ForwardPass(inputs[j]);
         BackwardPass(inputs[j], Output(), targets[j], inputs.size());
-        error += e_ * e_;
+        error += Error() * Error();
       }
       error /= (double)inputs.size();
       printf("epoch %ld - training error: %e\n", i, error);

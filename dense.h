@@ -31,41 +31,7 @@ SOFTWARE. */
 #include <functional>
 #include <iostream>
 #include <vector>
-
-class RandomGenerator {
-public:
-  RandomGenerator();
-  RandomGenerator(uint64_t seed);
-  virtual ~RandomGenerator();
-  void Seed(uint64_t seed);
-  uint64_t Uint64();
-  double Double();
-  double Uniform();
-
-private:
-  uint64_t state_;
-};
-
-RandomGenerator::RandomGenerator() : state_(123456789) {}
-
-RandomGenerator::RandomGenerator(uint64_t seed) : state_(seed) {}
-
-RandomGenerator::~RandomGenerator() {}
-
-void RandomGenerator::Seed(uint64_t seed) { state_ = seed; }
-
-uint64_t RandomGenerator::Uint64() {
-  state_ ^= state_ << 13;
-  state_ ^= state_ >> 7;
-  state_ ^= state_ << 17;
-  return state_;
-}
-
-double RandomGenerator::Double() { return static_cast<double>(Uint64()); }
-
-double RandomGenerator::Uniform() {
-  return Double() / static_cast<double>(std::numeric_limits<uint64_t>::max());
-}
+#include "utils.h"
 
 class Vector;
 
@@ -493,7 +459,7 @@ const Matrix HadamardProduct(const Matrix &x, const Matrix &y) {
   return p;
 }
 
-const Matrix DyadicProduct(const Vector &x, const Vector &y) {
+const Matrix OuterProduct(const Vector &x, const Vector &y) {
   Matrix p(x.Dim(), y.Dim());
   for (size_t i = 0; i < x.Dim(); i++) {
     for (size_t j = 0; j < y.Dim(); j++) {
