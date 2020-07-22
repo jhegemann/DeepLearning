@@ -31,15 +31,14 @@ static double SD(double s) { return s * (1.0 - s); }
 
 class NeuralNetwork {
 public:
-  NeuralNetwork() {
-    beta1_t_ = beta1_;
-    beta2_t_ = beta2_;
-    g_.Seed(time(nullptr));
-  }
+  NeuralNetwork() {}
 
   virtual ~NeuralNetwork() {}
 
-  void SetTopology(const std::vector<size_t> &d) {
+  void Init(const std::vector<size_t> &d) {
+    beta1_t_ = beta1_;
+    beta2_t_ = beta2_;
+    g_.Seed(time(nullptr));
     n_ = d.size() - 1;
     for (size_t i = 0; i < n_; i++) {
       d_.emplace_back(d[i + 1]);
@@ -53,6 +52,7 @@ public:
       dbm_hat_.emplace_back(d[i + 1]);
       dbv_.emplace_back(d[i + 1]);
       dbv_hat_.emplace_back(d[i + 1]);
+      dbl_.emplace_back(d[i + 1]);
       w_.emplace_back(d[i + 1], d[i]);
       w_.back().Random(g_, -0.1, 0.1);
       dw_.emplace_back(d[i + 1], d[i]);
@@ -60,19 +60,13 @@ public:
       dwm_hat_.emplace_back(d[i + 1], d[i]);
       dwv_.emplace_back(d[i + 1], d[i]);
       dwv_hat_.emplace_back(d[i + 1], d[i]);
+      dwl_.emplace_back(d[i + 1], d[i]);
     }
   }
 
-  const Vector &Output() {
-    return a_.back();
-  }
-
-  const Vector &Error() {
-    return e_;
-  }
-
-  void ForwardPass(const Vector &in) {
-    z_[0] = w_[0] * in + b_[0];
+  void ForwardPass(const Vector &input) {
+    i_ = input;
+    z_[0] = w_[0] * i_ + b_[0];
     a_[0] = z_[0].Apply(S);
     p_[0] = a_[0].Apply(SD);
     for (size_t i = 1; i < n_; i++) {
@@ -82,60 +76,75 @@ public:
     }
   }
 
-  void BackwardPass(const Vector &in, const Vector &o, const Vector &t, size_t n) {
-    e_ = o - t;
-    d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
-    db_[n_ - 1] = db_[n_ - 1] + (1.0 / n) * d_[n_ - 1];
-    dw_[n_ - 1] = dw_[n_ - 1] + (1.0 / n) * OuterProduct(d_[n_ - 1], a_[n_ - 2]);
-    for (size_t i = n_ - 2; i >= 1; i--) {
-      d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
-      db_[i] = db_[i] + (1.0 / n) * d_[i];
-      dw_[i] = dw_[i] + (1.0 / n) * OuterProduct(d_[i], a_[i - 1]);
-    }
-    d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
-    db_[0] = db_[0] + (1.0 / n) * d_[0];
-    dw_[0] = dw_[0] + (1.0 / n) * OuterProduct(d_[0], in);
+  const Vector &Predict(const Vector &input) {
+    ForwardPass(input);
+    return a_.back();
   }
 
-  void ZeroUpdate() {
+  void BackwardPass(const Vector &target) {
+    e_ = a_.back() - target;
+    rms_ += e_ * e_;
+    d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
+    db_[n_ - 1] = db_[n_ - 1] + d_[n_ - 1];
+    dw_[n_ - 1] = dw_[n_ - 1] + OuterProduct(d_[n_ - 1], a_[n_ - 2]);
+    for (size_t i = n_ - 2; i >= 1; i--) {
+      d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
+      db_[i] = db_[i] + d_[i];
+      dw_[i] = dw_[i] + OuterProduct(d_[i], a_[i - 1]);
+    }
+    d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
+    db_[0] = db_[0] + d_[0];
+    dw_[0] = dw_[0] + OuterProduct(d_[0], i_);
+  }
+
+  void PrepareStep() {
+    rms_ = 0.0;
     for (size_t i = 0; i < n_; i++) {
       db_[i].Zero();
       dw_[i].Zero();
     }
   }
 
-  void ApplyUpdate() {
+  void SGD(size_t batch_size) {
     for (size_t i = 0; i < n_; i++) {
-      dbm_[i] = beta1_ * dbm_[i] + (1.0 - beta1_) * db_[i];
-      dwm_[i] = beta1_ * dwm_[i] + (1.0 - beta1_) * dw_[i];
-      dbv_[i] = beta2_ * dbv_[i] + (1.0 - beta2_) * HadamardProduct(db_[i], db_[i]);
-      dwv_[i] = beta2_ * dwv_[i] + (1.0 - beta2_) * HadamardProduct(dw_[i], dw_[i]);
+      dbl_[i] = mu_ * dbl_[i] + (1.0 - mu_) * db_[i] * (1.0 / batch_size) ;
+      b_[i] = b_[i] - alpha_ * dbl_[i];
+      dwl_[i] = mu_ * dwl_[i] + (1.0 - mu_) * dw_[i] * (1.0 / batch_size);
+      w_[i] = w_[i] - alpha_ * dwl_[i];
+    }
+  }
+
+  void Adam(size_t batch_size) {
+    for (size_t i = 0; i < n_; i++) {
+      dbm_[i] = beta1_ * dbm_[i] + (1.0 - beta1_) * db_[i] * (1.0 / batch_size);
+      dwm_[i] = beta1_ * dwm_[i] + (1.0 - beta1_) * dw_[i] * (1.0 / batch_size);
+      dbv_[i] = beta2_ * dbv_[i] + (1.0 - beta2_) * (1.0 / pow(batch_size, 2)) * HadamardProduct(db_[i], db_[i]);
+      dwv_[i] = beta2_ * dwv_[i] + (1.0 - beta2_) * (1.0 / pow(batch_size, 2)) * HadamardProduct(dw_[i], dw_[i]);
       dbm_hat_[i] = dbm_[i] * (1.0 / (1.0 - beta1_t_));
       dwm_hat_[i] = dwm_[i] * (1.0 / (1.0 - beta1_t_));
       dbv_hat_[i] = dbv_[i] * (1.0 / (1.0 - beta2_t_));
       dwv_hat_[i] = dwv_[i] * (1.0 / (1.0 - beta2_t_));
       beta1_t_ *= beta1_;
       beta2_t_ *= beta2_;
-    }
-    for (size_t i = 0; i < n_; i++) {
       b_[i] = b_[i] - alpha_ * HadamardProduct(dbm_hat_[i], dbv_hat_[i].Apply([](double x) -> double { return 1.0 / (sqrt(x) + 1.0e-8); }));
       w_[i] = w_[i] - alpha_ * HadamardProduct(dwm_hat_[i], dwv_hat_[i].Apply([](double x) -> double { return 1.0 / (sqrt(x) + 1.0e-8); }));
     }
   }
 
-  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs) {
+  double Error(size_t batch_size) {
+    return rms_ / batch_size;
+  }
+
+  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs, size_t batch_size) {
     Vector output;
     for (size_t i = 0; i < epochs; i++) {
-      ZeroUpdate();
-      double error = 0.0;
+      PrepareStep();
       for (size_t j = 0; j < inputs.size(); j++) {
         ForwardPass(inputs[j]);
-        BackwardPass(inputs[j], Output(), targets[j], inputs.size());
-        error += Error() * Error();
+        BackwardPass(targets[j]);
       }
-      error /= (double)inputs.size();
-      printf("epoch %ld - training error: %e\n", i, error);
-      ApplyUpdate();
+      printf("epoch %ld - training error: %e\n", i, Error(inputs.size()));
+      Adam(inputs.size());
     }
   }
 
@@ -146,7 +155,11 @@ private:
   const double beta2_ = 0.999;
   double beta1_t_;
   double beta2_t_;
+  const double mu_ = 0.9;
+  double rms_;
   size_t n_;
+  Vector i_;
+  Vector t_;
   Vector e_;
   std::vector<Vector> d_;
   std::vector<Vector> z_;
@@ -158,10 +171,12 @@ private:
   std::vector<Vector> dbm_hat_;
   std::vector<Vector> dbv_;
   std::vector<Vector> dbv_hat_;
+  std::vector<Vector> dbl_;
   std::vector<Matrix> w_;
   std::vector<Matrix> dw_;
   std::vector<Matrix> dwm_;
   std::vector<Matrix> dwm_hat_;
   std::vector<Matrix> dwv_;
   std::vector<Matrix> dwv_hat_;
+  std::vector<Matrix> dwl_;
 };
