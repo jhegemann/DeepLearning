@@ -26,8 +26,7 @@ SOFTWARE. */
 #include "network.h"
 
 int main(int argc, char **argv) {
-  NeuralNetwork network;
-  network.Init( {1, 32, 32, 1} );
+  NeuralNetwork network( {1, 32, 32, 1} );
 
   std::vector<Vector> inputs;
   std::vector<Vector> outputs;
@@ -39,16 +38,17 @@ int main(int argc, char **argv) {
     outputs.back()(0) = 0.5 + 0.25 * sin(x);
   }
 
-  network.Train(inputs, outputs, 2500, inputs.size(), OPTIMIZER_ADAM);
+  network.Train(inputs, outputs, 2500, inputs.size() / 10, OPTIMIZER_ADAM);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);
   for (double x = -M_PI; x <= M_PI; x += 1.0e-2) {
     Vector input(1);
     input(0) = x;
-    Vector output = network.Predict(input);
-    file << x << " " << output(0) << std::endl;
+    network.ForwardPass(input);
+    file << x << " " << network.Prediction()(0) << std::endl;
   }
   file.close();
 
+  return 0;
 }
