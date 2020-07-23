@@ -149,22 +149,13 @@ public:
     for (size_t i = 0; i < inputs.size(); i++) {
       dataset_indices_[i] = i;
     }
-    batches_count_ = dataset_indices_.size() / batch_size;
-    batches_residual_ = dataset_indices_.size() % batch_size;
-    batches_.resize(batches_count_);
+    batches_count_ = dataset_indices_.size() / major_batch_size_;
+    batches_residual_ = dataset_indices_.size() % major_batch_size_;
     for (size_t i = 0; i < batches_count_; i++) {
-      std::vector<size_t> b(batch_size);
-      for (size_t j = 0; j < batch_size; j++) {
-        b[j] = dataset_indices_[i * batch_size + j];
-      }
-      batches_[i] = b;
+      batches_.emplace_back(major_batch_size_);
     } 
     if (batches_residual_ > 0) {
-      std::vector<size_t> b(batches_residual_); 
-      for (size_t i = 0; i < batches_residual_; i++) {
-        b[i] = dataset_indices_[batches_count_ * batch_size + i];
-      }
-      batches_.emplace_back(b);
+      batches_.emplace_back(batches_residual_);
     }
   }
 
