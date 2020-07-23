@@ -221,7 +221,6 @@ private:
   double rms_;
   size_t n_;
   Vector i_;
-  Vector t_;
   Vector e_;
   std::vector<size_t> dataset_indices_;
   std::vector<std::vector<size_t>> batches_;
