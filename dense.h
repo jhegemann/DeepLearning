@@ -31,7 +31,6 @@ SOFTWARE. */
 #include <functional>
 #include <iostream>
 #include <vector>
-#include "utils.h"
 
 class Vector;
 
@@ -50,7 +49,7 @@ public:
   void Shape(const size_t d);
   void Zero();
   void One();
-  void Random(RandomGenerator g, double min, double max);
+  void Random(double min, double max);
   Vector &operator=(const Vector &x);
   Vector &operator=(const std::vector<double> &x);
   Vector &operator=(Vector &&x);
@@ -111,9 +110,9 @@ void Vector::One() {
   }
 }
 
-void Vector::Random(RandomGenerator g, double min, double max) {
+void Vector::Random(double min, double max) {
   for (size_t i = 0; i < x_.size(); i++) {
-    x_[i] = g.Uniform() * (max - min) + min;
+    x_[i] = ((double)rand() / (double)RAND_MAX) * (max - min) + min;
   }
 }
 
@@ -223,7 +222,7 @@ public:
   void Shape(const size_t m, const size_t n);
   void Zero();
   void One();
-  void Random(RandomGenerator g, double min, double max);
+  void Random(double min, double max);
   Matrix Apply(std::function<double(double)> f);
   Matrix &operator=(const Matrix &x);
   Matrix &operator=(Matrix &&x);
@@ -287,9 +286,9 @@ void Matrix::One() {
   }
 }
 
-void Matrix::Random(RandomGenerator g, double min, double max) {
+void Matrix::Random(double min, double max) {
   for (size_t i = 0; i < x_.size(); i++) {
-    x_[i] = g.Uniform() * (max - min) + min;
+    x_[i] = ((double)rand() / (double)RAND_MAX) * (max - min) + min;
   }
 }
 

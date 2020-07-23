@@ -38,7 +38,7 @@ public:
   NeuralNetwork(const std::vector<size_t> &d) {
     beta1_t_ = beta1_;
     beta2_t_ = beta2_;
-    g_.Seed(time(nullptr));
+    srand(time(nullptr));
     n_ = d.size() - 1;
     for (size_t i = 0; i < n_; i++) {
       d_.emplace_back(d[i + 1]);
@@ -46,7 +46,7 @@ public:
       a_.emplace_back(d[i + 1]);
       p_.emplace_back(d[i + 1]);
       b_.emplace_back(d[i + 1]);
-      b_.back().Random(g_, -0.1, 0.1);
+      b_.back().Random(-0.1, 0.1);
       db_.emplace_back(d[i + 1]);
       dbm_.emplace_back(d[i + 1]);
       dbm_hat_.emplace_back(d[i + 1]);
@@ -54,7 +54,7 @@ public:
       dbv_hat_.emplace_back(d[i + 1]);
       dbl_.emplace_back(d[i + 1]);
       w_.emplace_back(d[i + 1], d[i]);
-      w_.back().Random(g_, -0.1, 0.1);
+      w_.back().Random(-0.1, 0.1);
       dw_.emplace_back(d[i + 1], d[i]);
       dwm_.emplace_back(d[i + 1], d[i]);
       dwm_hat_.emplace_back(d[i + 1], d[i]);
@@ -170,7 +170,7 @@ public:
 
   void SampleBatches() {
     for (size_t i = 0; i < dataset_indices_.size(); i++) {
-      size_t j = g_.Uint64() % (dataset_indices_.size() - i) + i;
+      size_t j = rand() % (dataset_indices_.size() - i) + i;
       std::swap(dataset_indices_[i], dataset_indices_[j]);
     }
     for (size_t i = 0; i < batches_count_; i++) {
@@ -192,12 +192,11 @@ public:
       double error = 0.0;
       for (size_t i = 0; i < batches_.size(); i++) {
         PrepareStep();
-        std::vector<size_t> batch = batches_[i];
-        for (size_t j = 0; j < batch.size(); j++) {
-          ForwardPass(inputs[batch[j]]);
-          BackwardPass(targets[batch[j]]);
+        for (size_t j = 0; j < batches_[i].size(); j++) {
+          ForwardPass(inputs[batches_[i][j]]);
+          BackwardPass(targets[batches_[i][j]]);
         }
-        ScaleGradient(batch.size());
+        ScaleGradient(batches_[i].size());
         if (optimizer == OPTIMIZER_SGD) {
           SGD();
         } else if (optimizer == OPTIMIZER_ADAM) {
@@ -213,7 +212,6 @@ public:
   }
 
 private:
-  RandomGenerator g_;
   const double alpha_ = 1.0e-3;
   const double beta1_ = 0.9;
   const double beta2_ = 0.999;
