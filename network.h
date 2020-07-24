@@ -181,13 +181,13 @@ public:
     for (size_t i = 0; i < epochs; i++) {
       SampleBatches();
       double error = 0.0;
-      for (size_t i = 0; i < batches_.size(); i++) {
+      for (size_t j = 0; j < batches_.size(); j++) {
         PrepareStep();
-        for (size_t j = 0; j < batches_[i].size(); j++) {
-          ForwardPass(inputs[batches_[i][j]]);
-          BackwardPass(targets[batches_[i][j]]);
+        for (size_t k = 0; k < batches_[j].size(); k++) {
+          ForwardPass(inputs[batches_[j][k]]);
+          BackwardPass(targets[batches_[j][k]]);
         }
-        ScaleGradient(batches_[i].size());
+        ScaleGradient(batches_[j].size());
         if (optimizer == OPTIMIZER_SGD) {
           SGD();
         } else if (optimizer == OPTIMIZER_ADAM) {
