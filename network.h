@@ -238,8 +238,7 @@ public:
         optimizer.Step(w_, dw_, b_, db_);
         error += Error();
       }
-      double total_error = error / inputs.size();
-      printf("epoch %ld - training error: %e\n", i, total_error);
+      printf("epoch %ld - training error: %e\n", i, error / inputs.size());
     }
   }
 
