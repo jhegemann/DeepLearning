@@ -26,7 +26,10 @@ SOFTWARE. */
 #include "network.h"
 
 int main(int argc, char **argv) {
-  NeuralNetwork network( {1, 32, 32, 1} );
+  std::vector<size_t> topology = {1, 32, 32, 1};
+  NeuralNetwork network(topology);
+  Adam adam(topology, 1.0e-3, 0.9, 0.999);
+  GradientDescent sgd(topology, 1.0, 0.9);
 
   std::vector<Vector> inputs;
   std::vector<Vector> outputs;
@@ -38,7 +41,7 @@ int main(int argc, char **argv) {
     outputs.back()(0) = 0.5 + 0.25 * sin(x);
   }
 
-  network.Train(inputs, outputs, 2048, 64, OPTIMIZER_ADAM);
+  network.Train(inputs, outputs, 2048, 64, adam);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);

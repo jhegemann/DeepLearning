@@ -26,20 +26,105 @@ SOFTWARE. */
 #include <ctime>
 #include "dense.h"
 
-#define OPTIMIZER_SGD 0
-#define OPTIMIZER_ADAM 1
-
 static double Sigmoid(double x) { return 1.0 / (1.0 + exp(-x)); }
 static double SigmoidPrime(double s) { return s * (1.0 - s); }
 static double AdamScaling(double x) { return 1.0 / (sqrt(x) + 1.0e-8); }
 
-class NeuralNetwork {
+class NeuralOptimizer {
 public:
-  NeuralNetwork(const std::vector<size_t> &d) {
+  NeuralOptimizer() {}
+  virtual ~NeuralOptimizer() {}
+  virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) {};
+
+private:
+
+};
+
+class Adam : public NeuralOptimizer {
+public:
+  Adam(const std::vector<size_t> &d, double alpha = 1.0e-3, double beta1 = 0.9, double beta2 = 0.999) : n_(d.size() - 1), alpha_(alpha), beta1_(beta1), beta2_(beta2) {
     beta1_t_ = beta1_;
     beta2_t_ = beta2_;
+    for (size_t i = 0; i < n_; i++) {
+      dbm_.emplace_back(d[i + 1]);
+      dbm_hat_.emplace_back(d[i + 1]);
+      dbv_.emplace_back(d[i + 1]);
+      dbv_hat_.emplace_back(d[i + 1]);
+      dwm_.emplace_back(d[i + 1], d[i]);
+      dwm_hat_.emplace_back(d[i + 1], d[i]);
+      dwv_.emplace_back(d[i + 1], d[i]);
+      dwv_hat_.emplace_back(d[i + 1], d[i]);
+    }
+  }
+
+  virtual ~Adam() {}
+
+  virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) {
+    for (size_t i = 0; i < n_; i++) {
+      dbm_[i] = beta1_ * dbm_[i] + (1.0 - beta1_) * db[i];
+      dwm_[i] = beta1_ * dwm_[i] + (1.0 - beta1_) * dw[i];
+      dbv_[i] = beta2_ * dbv_[i] + (1.0 - beta2_) * HadamardProduct(db[i], db[i]);
+      dwv_[i] = beta2_ * dwv_[i] + (1.0 - beta2_) * HadamardProduct(dw[i], dw[i]);
+      dbm_hat_[i] = dbm_[i] * (1.0 / (1.0 - beta1_t_));
+      dwm_hat_[i] = dwm_[i] * (1.0 / (1.0 - beta1_t_));
+      dbv_hat_[i] = dbv_[i] * (1.0 / (1.0 - beta2_t_));
+      dwv_hat_[i] = dwv_[i] * (1.0 / (1.0 - beta2_t_));
+      beta1_t_ *= beta1_;
+      beta2_t_ *= beta2_;
+      b[i] = b[i] - alpha_ * HadamardProduct(dbm_hat_[i], dbv_hat_[i].Apply(AdamScaling));
+      w[i] = w[i] - alpha_ * HadamardProduct(dwm_hat_[i], dwv_hat_[i].Apply(AdamScaling));
+    }
+  }
+
+private:
+  size_t n_;
+  double alpha_;
+  double beta1_;
+  double beta2_;
+  double beta1_t_;
+  double beta2_t_;
+  std::vector<Vector> dbm_;
+  std::vector<Vector> dbm_hat_;
+  std::vector<Vector> dbv_;
+  std::vector<Vector> dbv_hat_;
+  std::vector<Matrix> dwm_;
+  std::vector<Matrix> dwm_hat_;
+  std::vector<Matrix> dwv_;
+  std::vector<Matrix> dwv_hat_;
+};
+
+class GradientDescent : public NeuralOptimizer {
+public:
+  GradientDescent(const std::vector<size_t> &d, double alpha = 1.0e-3, double mu = 0.9) : n_(d.size() - 1), alpha_(alpha), mu_(mu) {
+    for (size_t i = 0; i < n_; i++) {
+      dbl_.emplace_back(d[i + 1]);
+      dwl_.emplace_back(d[i + 1], d[i]);
+    }
+  }
+
+  virtual ~GradientDescent() {}
+
+  virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) {
+    for (size_t i = 0; i < n_; i++) {
+      dbl_[i] = mu_ * dbl_[i] + (1.0 - mu_) * db[i];
+      b[i] = b[i] - alpha_ * dbl_[i];
+      dwl_[i] = mu_ * dwl_[i] + (1.0 - mu_) * dw[i];
+      w[i] = w[i] - alpha_ * dwl_[i];
+    }
+  }
+  
+private:
+  size_t n_;
+  double alpha_;
+  double mu_;
+  std::vector<Vector> dbl_;
+  std::vector<Matrix> dwl_;
+};
+
+class NeuralNetwork {
+public:
+  NeuralNetwork(const std::vector<size_t> &d) : n_(d.size() - 1) {
     srand(time(nullptr));
-    n_ = d.size() - 1;
     for (size_t i = 0; i < n_; i++) {
       d_.emplace_back(d[i + 1]);
       z_.emplace_back(d[i + 1]);
@@ -48,19 +133,9 @@ public:
       b_.emplace_back(d[i + 1]);
       b_.back().Random(-0.1, 0.1);
       db_.emplace_back(d[i + 1]);
-      dbm_.emplace_back(d[i + 1]);
-      dbm_hat_.emplace_back(d[i + 1]);
-      dbv_.emplace_back(d[i + 1]);
-      dbv_hat_.emplace_back(d[i + 1]);
-      dbl_.emplace_back(d[i + 1]);
       w_.emplace_back(d[i + 1], d[i]);
       w_.back().Random(-0.1, 0.1);
       dw_.emplace_back(d[i + 1], d[i]);
-      dwm_.emplace_back(d[i + 1], d[i]);
-      dwm_hat_.emplace_back(d[i + 1], d[i]);
-      dwv_.emplace_back(d[i + 1], d[i]);
-      dwv_hat_.emplace_back(d[i + 1], d[i]);
-      dwl_.emplace_back(d[i + 1], d[i]);
     }
   }
 
@@ -105,37 +180,11 @@ public:
     }
   }
 
-  void PrepareStep() {
+  void ZeroGradient() {
     rms_ = 0.0;
     for (size_t i = 0; i < n_; i++) {
       db_[i].Zero();
       dw_[i].Zero();
-    }
-  }
-
-  void SGD() {
-    for (size_t i = 0; i < n_; i++) {
-      dbl_[i] = mu_ * dbl_[i] + (1.0 - mu_) * db_[i];
-      b_[i] = b_[i] - alpha_ * dbl_[i];
-      dwl_[i] = mu_ * dwl_[i] + (1.0 - mu_) * dw_[i];
-      w_[i] = w_[i] - alpha_ * dwl_[i];
-    }
-  }
-
-  void Adam() {
-    for (size_t i = 0; i < n_; i++) {
-      dbm_[i] = beta1_ * dbm_[i] + (1.0 - beta1_) * db_[i];
-      dwm_[i] = beta1_ * dwm_[i] + (1.0 - beta1_) * dw_[i];
-      dbv_[i] = beta2_ * dbv_[i] + (1.0 - beta2_) * HadamardProduct(db_[i], db_[i]);
-      dwv_[i] = beta2_ * dwv_[i] + (1.0 - beta2_) * HadamardProduct(dw_[i], dw_[i]);
-      dbm_hat_[i] = dbm_[i] * (1.0 / (1.0 - beta1_t_));
-      dwm_hat_[i] = dwm_[i] * (1.0 / (1.0 - beta1_t_));
-      dbv_hat_[i] = dbv_[i] * (1.0 / (1.0 - beta2_t_));
-      dwv_hat_[i] = dwv_[i] * (1.0 / (1.0 - beta2_t_));
-      beta1_t_ *= beta1_;
-      beta2_t_ *= beta2_;
-      b_[i] = b_[i] - alpha_ * HadamardProduct(dbm_hat_[i], dbv_hat_[i].Apply(AdamScaling));
-      w_[i] = w_[i] - alpha_ * HadamardProduct(dwm_hat_[i], dwv_hat_[i].Apply(AdamScaling));
     }
   }
 
@@ -176,25 +225,19 @@ public:
     }
   }
 
-  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs, size_t batch_size, int optimizer) {
+  void Train(std::vector<Vector> &inputs, std::vector<Vector> &targets, size_t epochs, size_t batch_size, NeuralOptimizer &optimizer) {
     PrepareBatches(inputs, targets, batch_size);
     for (size_t i = 0; i < epochs; i++) {
       SampleBatches();
       double error = 0.0;
       for (size_t j = 0; j < batches_.size(); j++) {
-        PrepareStep();
+        ZeroGradient();
         for (size_t k = 0; k < batches_[j].size(); k++) {
           ForwardPass(inputs[batches_[j][k]]);
           BackwardPass(targets[batches_[j][k]]);
         }
         ScaleGradient(batches_[j].size());
-        if (optimizer == OPTIMIZER_SGD) {
-          SGD();
-        } else if (optimizer == OPTIMIZER_ADAM) {
-          Adam();
-        } else {
-          abort();
-        }
+        optimizer.Step(w_, dw_, b_, db_);
         error += Error();
       }
       double total_error = error / inputs.size();
@@ -203,12 +246,6 @@ public:
   }
 
 private:
-  const double alpha_ = 1.0e-3;
-  const double beta1_ = 0.9;
-  const double beta2_ = 0.999;
-  double beta1_t_;
-  double beta2_t_;
-  const double mu_ = 0.9;
   double rms_;
   size_t n_;
   Vector i_;
@@ -224,16 +261,6 @@ private:
   std::vector<Vector> p_;
   std::vector<Vector> b_;
   std::vector<Vector> db_;
-  std::vector<Vector> dbm_;
-  std::vector<Vector> dbm_hat_;
-  std::vector<Vector> dbv_;
-  std::vector<Vector> dbv_hat_;
-  std::vector<Vector> dbl_;
   std::vector<Matrix> w_;
   std::vector<Matrix> dw_;
-  std::vector<Matrix> dwm_;
-  std::vector<Matrix> dwm_hat_;
-  std::vector<Matrix> dwv_;
-  std::vector<Matrix> dwv_hat_;
-  std::vector<Matrix> dwl_;
 };
