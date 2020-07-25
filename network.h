@@ -34,7 +34,7 @@ class NeuralOptimizer {
 public:
   NeuralOptimizer() {}
   virtual ~NeuralOptimizer() {}
-  virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) {};
+  virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) = 0;
 
 private:
 
@@ -42,9 +42,7 @@ private:
 
 class Adam : public NeuralOptimizer {
 public:
-  Adam(const std::vector<size_t> &d, double alpha = 1.0e-3, double beta1 = 0.9, double beta2 = 0.999) : n_(d.size() - 1), alpha_(alpha), beta1_(beta1), beta2_(beta2) {
-    beta1_t_ = beta1_;
-    beta2_t_ = beta2_;
+  Adam(const std::vector<size_t> &d, double alpha = 1.0e-3, double beta1 = 0.9, double beta2 = 0.999) : n_(d.size() - 1), alpha_(alpha), beta1_(beta1), beta2_(beta2), beta1_t_(beta1), beta2_t_(beta2) {
     for (size_t i = 0; i < n_; i++) {
       dbm_.emplace_back(d[i + 1]);
       dbm_hat_.emplace_back(d[i + 1]);
@@ -65,14 +63,14 @@ public:
       dwm_[i] = beta1_ * dwm_[i] + (1.0 - beta1_) * dw[i];
       dbv_[i] = beta2_ * dbv_[i] + (1.0 - beta2_) * HadamardProduct(db[i], db[i]);
       dwv_[i] = beta2_ * dwv_[i] + (1.0 - beta2_) * HadamardProduct(dw[i], dw[i]);
-      dbm_hat_[i] = dbm_[i] * (1.0 / (1.0 - beta1_t_));
-      dwm_hat_[i] = dwm_[i] * (1.0 / (1.0 - beta1_t_));
-      dbv_hat_[i] = dbv_[i] * (1.0 / (1.0 - beta2_t_));
-      dwv_hat_[i] = dwv_[i] * (1.0 / (1.0 - beta2_t_));
+      dbm_hat_[i] = dbm_[i] / (1.0 - beta1_t_);
+      dwm_hat_[i] = dwm_[i] / (1.0 - beta1_t_);
+      dbv_hat_[i] = dbv_[i] / (1.0 - beta2_t_);
+      dwv_hat_[i] = dwv_[i] / (1.0 - beta2_t_);
       beta1_t_ *= beta1_;
       beta2_t_ *= beta2_;
-      b[i] = b[i] - alpha_ * HadamardProduct(dbm_hat_[i], dbv_hat_[i].Apply(AdamScaling));
-      w[i] = w[i] - alpha_ * HadamardProduct(dwm_hat_[i], dwv_hat_[i].Apply(AdamScaling));
+      b[i] -= alpha_ * HadamardProduct(dbm_hat_[i], dbv_hat_[i].Apply(AdamScaling));
+      w[i] -= alpha_ * HadamardProduct(dwm_hat_[i], dwv_hat_[i].Apply(AdamScaling));
     }
   }
 
@@ -107,9 +105,9 @@ public:
   virtual void Step(std::vector<Matrix> &w, std::vector<Matrix> &dw, std::vector<Vector> &b, std::vector<Vector> &db) {
     for (size_t i = 0; i < n_; i++) {
       dbl_[i] = mu_ * dbl_[i] + (1.0 - mu_) * db[i];
-      b[i] = b[i] - alpha_ * dbl_[i];
+      b[i] -= alpha_ * dbl_[i];
       dwl_[i] = mu_ * dwl_[i] + (1.0 - mu_) * dw[i];
-      w[i] = w[i] - alpha_ * dwl_[i];
+      w[i] -= alpha_ * dwl_[i];
     }
   }
   
@@ -161,22 +159,22 @@ public:
     e_ = a_.back() - target;
     rms_ += e_ * e_;
     d_[n_ - 1] = HadamardProduct(e_, p_[n_ - 1]);
-    db_[n_ - 1] = db_[n_ - 1] + d_[n_ - 1];
-    dw_[n_ - 1] = dw_[n_ - 1] + OuterProduct(d_[n_ - 1], a_[n_ - 2]);
+    db_[n_ - 1] += d_[n_ - 1];
+    dw_[n_ - 1] += OuterProduct(d_[n_ - 1], a_[n_ - 2]);
     for (size_t i = n_ - 2; i >= 1; i--) {
       d_[i] = HadamardProduct(w_[i + 1].Transpose() * d_[i + 1], p_[i]);
-      db_[i] = db_[i] + d_[i];
-      dw_[i] = dw_[i] + OuterProduct(d_[i], a_[i - 1]);
+      db_[i] += d_[i];
+      dw_[i] += OuterProduct(d_[i], a_[i - 1]);
     }
     d_[0] = HadamardProduct(w_[1].Transpose() * d_[1], p_[0]);
-    db_[0] = db_[0] + d_[0];
-    dw_[0] = dw_[0] + OuterProduct(d_[0], i_);
+    db_[0] += d_[0];
+    dw_[0] += OuterProduct(d_[0], i_);
   }
 
   void ScaleGradient(size_t batch_size) {
     for (size_t i = 0; i < n_; i++) {
-      db_[i] = db_[i] * (1.0 / batch_size);
-      dw_[i] = dw_[i] * (1.0 / batch_size);
+      db_[i] /= batch_size;
+      dw_[i] /= batch_size;
     }
   }
 

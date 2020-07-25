@@ -54,6 +54,10 @@ public:
   Vector &operator=(const std::vector<double> &x);
   Vector &operator=(Vector &&x);
   Vector &operator=(std::vector<double> &&x);
+  Vector &operator+=(const Vector &x);
+  Vector &operator-=(const Vector &x);
+  Vector &operator*=(const double a);
+  Vector &operator/=(const double a);
   const double &operator()(const size_t i) const;
   double &operator()(const size_t i);
   Vector Apply(std::function<double(double)> f);
@@ -139,6 +143,34 @@ Vector &Vector::operator=(Vector &&x) {
 
 Vector &Vector::operator=(std::vector<double> &&x) {
   x_ = std::move(x);
+  return *this;
+}
+
+Vector &Vector::operator+=(const Vector &x) {
+  for (size_t i = 0; i < x_.size(); i++) {
+    x_[i] += x(i);
+  }
+  return *this;
+}
+
+Vector &Vector::operator-=(const Vector &x) {
+  for (size_t i = 0; i < x_.size(); i++) {
+    x_[i] -= x(i);
+  }
+  return *this;
+}
+
+Vector &Vector::operator*=(const double a) {
+  for (size_t i = 0; i < x_.size(); i++) {
+    x_[i] *= a;
+  }
+  return *this;
+}
+
+Vector &Vector::operator/=(const double a) {
+  for (size_t i = 0; i < x_.size(); i++) {
+    x_[i] /= a;
+  }
   return *this;
 }
 
@@ -228,6 +260,10 @@ public:
   Matrix &operator=(Matrix &&x);
   const double &operator()(const size_t i, const size_t j) const;
   double &operator()(const size_t i, const size_t j);
+  Matrix &operator+=(const Matrix &x);
+  Matrix &operator-=(const Matrix &x);
+  Matrix &operator*=(const double a);
+  Matrix &operator/=(const double a);
   double Trace() const;
   size_t Rows() const;
   size_t Cols() const;
@@ -330,6 +366,42 @@ double &Matrix::operator()(const size_t i, const size_t j) {
   return x_[i * n_ + j];
 }
 
+Matrix &Matrix::operator+=(const Matrix &x) {
+  for (size_t i = 0; i < x.Rows(); i++) {
+    for (size_t j = 0; j < x.Cols(); j++) {
+      (*this)(i, j) += x(i, j);
+    }
+  }
+  return *this;
+}
+
+Matrix &Matrix::operator-=(const Matrix &x) {
+  for (size_t i = 0; i < x.Rows(); i++) {
+    for (size_t j = 0; j < x.Cols(); j++) {
+      (*this)(i, j) -= x(i, j);
+    }
+  }
+  return *this;
+}
+
+Matrix &Matrix::operator*=(const double a) {
+  for (size_t i = 0; i < Rows(); i++) {
+    for (size_t j = 0; j < Cols(); j++) {
+      (*this)(i, j) *= a;
+    }
+  }
+  return *this;
+}
+
+Matrix &Matrix::operator/=(const double a) {
+  for (size_t i = 0; i < Rows(); i++) {
+    for (size_t j = 0; j < Cols(); j++) {
+      (*this)(i, j) /= a;
+    }
+  }
+  return *this;
+}
+
 double Matrix::Trace() const {
   double t = (*this)(0, 0);
   for (size_t i = 1; i < m_; i++) {
@@ -350,6 +422,14 @@ const Matrix Matrix::Transpose() const {
     }
   }
   return t;
+}
+
+const Vector operator/(const Vector &x, const double a) {
+  Vector s(x);
+  for (size_t i = 0; i < s.Dim(); i++) {
+    s(i) /= a;
+  }
+  return s;
 }
 
 const Vector operator*(const Vector &x, const double a) {
@@ -382,6 +462,16 @@ const Vector operator-(const Vector &x, const Vector &y) {
   Vector s(x);
   for (size_t i = 0; i < x.Dim(); i++) {
     s(i) -= y(i);
+  }
+  return s;
+}
+
+const Matrix operator/(const Matrix &m, const double a) {
+  Matrix s(m);
+  for (size_t i = 0; i < s.Rows(); i++) {
+    for (size_t j = 0; j < s.Cols(); j++) {
+      s(i, j) /= a;
+    }
   }
   return s;
 }
