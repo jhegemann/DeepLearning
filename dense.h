@@ -42,8 +42,6 @@ public:
   Vector(const size_t d);
   Vector(const Vector &x);
   Vector(const std::vector<double> &x);
-  Vector(Vector &&x);
-  Vector(std::vector<double> &&x);
   virtual ~Vector();
   void Print();
   void Shape(const size_t d);
@@ -52,8 +50,6 @@ public:
   void Random(double min, double max);
   Vector &operator=(const Vector &x);
   Vector &operator=(const std::vector<double> &x);
-  Vector &operator=(Vector &&x);
-  Vector &operator=(std::vector<double> &&x);
   Vector &operator+=(const Vector &x);
   Vector &operator-=(const Vector &x);
   Vector &operator*=(const double a);
@@ -80,10 +76,6 @@ Vector::Vector(const size_t d) { Shape(d); }
 Vector::Vector(const Vector &x) { x_ = x.x_; }
 
 Vector::Vector(const std::vector<double> &x) { x_ = x; }
-
-Vector::Vector(Vector &&x) { x_ = std::move(x.x_); }
-
-Vector::Vector(std::vector<double> &&x) { x_ = std::move(x); }
 
 Vector::~Vector() { x_.clear(); }
 
@@ -130,19 +122,6 @@ Vector &Vector::operator=(const Vector &x) {
 
 Vector &Vector::operator=(const std::vector<double> &x) {
   x_ = x;
-  return *this;
-}
-
-Vector &Vector::operator=(Vector &&x) {
-  if (this == &x) {
-    return *this;
-  }
-  x_ = std::move(x.x_);
-  return *this;
-}
-
-Vector &Vector::operator=(std::vector<double> &&x) {
-  x_ = std::move(x);
   return *this;
 }
 
@@ -248,7 +227,6 @@ public:
   Matrix();
   Matrix(const size_t m, const size_t n);
   Matrix(const Matrix &x);
-  Matrix(Matrix &&x);
   virtual ~Matrix();
   void Print();
   void Shape(const size_t m, const size_t n);
@@ -257,7 +235,6 @@ public:
   void Random(double min, double max);
   Matrix Apply(std::function<double(double)> f);
   Matrix &operator=(const Matrix &x);
-  Matrix &operator=(Matrix &&x);
   const double &operator()(const size_t i, const size_t j) const;
   double &operator()(const size_t i, const size_t j);
   Matrix &operator+=(const Matrix &x);
@@ -284,8 +261,6 @@ Matrix::Matrix(const Matrix &x) {
   m_ = x.m_;
   n_ = x.n_;
 }
-
-Matrix::Matrix(Matrix &&x) { x_ = std::move(x.x_); }
 
 Matrix::~Matrix() { x_.clear(); }
 
@@ -345,16 +320,6 @@ Matrix &Matrix::operator=(const Matrix &x) {
   x_ = x.x_;
   m_ = x.m_;
   n_ = x.n_;
-  return *this;
-}
-
-Matrix &Matrix::operator=(Matrix &&x) {
-  if (this == &x) {
-    return *this;
-  }
-  x_ = std::move(x.x_);
-  m_ = std::move(x.m_);
-  n_ = std::move(x.n_);
   return *this;
 }
 
