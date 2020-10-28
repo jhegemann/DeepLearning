@@ -216,10 +216,8 @@ public:
         batches_[i][j] = dataset_indices_[i * major_batch_size_ + j];
       }
     } 
-    if (batches_residual_ > 0) {
-      for (size_t i = 0; i < batches_residual_; i++) {
-        batches_.back()[i] = dataset_indices_[batches_count_ * major_batch_size_ + i];
-      }
+    for (size_t i = 0; i < batches_residual_; i++) {
+      batches_.back()[i] = dataset_indices_[batches_count_ * major_batch_size_ + i];
     }
   }
 
