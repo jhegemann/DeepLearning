@@ -26,30 +26,36 @@ SOFTWARE. */
 #include "network.h"
 
 int main(int argc, char **argv) {
-  std::vector<size_t> topology = {1, 32, 32, 1};
+  std::vector<size_t> topology = {1, 24, 24, 24, 1};
   NeuralNetwork network(topology);
   Adam adam(topology, 1.0e-3, 0.9, 0.999);
-  GradientDescent sgd(topology, 1.0, 0.9);
 
-  std::vector<Vector> inputs;
-  std::vector<Vector> outputs;
+  std::vector<double> x;
+  std::vector<double> y;
 
-  for (double x = -M_PI; x <= M_PI; x += 1.0e-2) {
-    inputs.emplace_back(1);
-    inputs.back()(0) = x;
-    outputs.emplace_back(1);
-    outputs.back()(0) = 0.5 + 0.25 * sin(x);
+  size_t n = 256;
+  for (size_t i = 0; i < n; i++) {
+    double a = (double) i / n * 2.0 * M_PI;
+    x.emplace_back(a);
+    y.emplace_back(0.5 + 0.25 * sin(a));
   }
 
-  network.Train(inputs, outputs, 2048, 64, adam);
+  Matrix inputs(x.size(), 1);
+  Matrix outputs(y.size(), 1);
+
+  for (size_t i = 0; i < x.size(); i++) {
+    inputs(i, 0) = x[i];
+    outputs(i, 0) = y[i];
+  }
+
+  network.Train(inputs, outputs, 32768, adam);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);
-  for (double x = -M_PI; x <= M_PI; x += 1.0e-2) {
-    Vector input(1);
-    input(0) = x;
-    network.ForwardPass(input);
-    file << x << " " << network.Prediction()(0) << std::endl;
+  Matrix prediction = network.Predict(inputs);
+  file << std::scientific;
+  for (size_t i = 0; i < prediction.Rows(); i++) {
+    file << x[i] << " " << prediction(i, 0) << std::endl;
   }
   file.close();
 
