@@ -26,36 +26,28 @@ SOFTWARE. */
 #include "network.h"
 
 int main(int argc, char **argv) {
-  std::vector<size_t> topology = {1, 24, 24, 24, 1};
+  std::vector<size_t> topology = {1, 32, 32, 1};
   NeuralNetwork network(topology);
   Adam adam(topology, 1.0e-3, 0.9, 0.999);
 
-  std::vector<double> x;
-  std::vector<double> y;
+  const size_t n = 32;
+  Matrix inputs(n, 1);
+  Matrix outputs(n, 1);
 
-  size_t n = 256;
   for (size_t i = 0; i < n; i++) {
     double a = (double) i / n * 2.0 * M_PI;
-    x.emplace_back(a);
-    y.emplace_back(0.5 + 0.25 * sin(a));
+    inputs(i, 0) = a;
+    outputs(i, 0) = 0.5 + 0.25 * sin(a);
   }
 
-  Matrix inputs(x.size(), 1);
-  Matrix outputs(y.size(), 1);
-
-  for (size_t i = 0; i < x.size(); i++) {
-    inputs(i, 0) = x[i];
-    outputs(i, 0) = y[i];
-  }
-
-  network.Train(inputs, outputs, 32768, adam);
+  network.Train(inputs, outputs, 8192, adam);
 
   std::fstream file;
   file.open("sin.txt", std::fstream::out);
   Matrix prediction = network.Predict(inputs);
   file << std::scientific;
-  for (size_t i = 0; i < prediction.Rows(); i++) {
-    file << x[i] << " " << prediction(i, 0) << std::endl;
+  for (size_t i = 0; i < n; i++) {
+    file << (double) i / n * 2.0 * M_PI << " " << prediction(i, 0) << std::endl;
   }
   file.close();
 

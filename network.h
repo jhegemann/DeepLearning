@@ -125,8 +125,8 @@ public:
       dw_.emplace_back(d_[i - 1], d_[i]);
       b_.emplace_back(1, d_[i]);
       db_.emplace_back(1, d_[i]);
-      w_.back().Random(-sqrt(2 / (d_[i - 1] + d_[i])), sqrt(2 / (d_[i - 1] + d_[i])));
-      b_.back().Random(-sqrt(2 / (d_[i - 1] + d_[i])), sqrt(2 / (d_[i - 1] + d_[i])));
+      w_.back().Random(-1.0, 1.0);
+      b_.back().Random(-1.0, 1.0);
     }
   }
 
@@ -146,7 +146,7 @@ public:
     a[0] = x;
     for (size_t i = 0; i < epochs; i++) {
       for (size_t j = 1; j <= n_ops; j++) {
-        a[j] = Sigmoid(a[j - 1] * w_[j - 1] + b_[j - 1]);
+        a[j] = Sigmoid(a[j - 1] * w_[j - 1] + ones * b_[j - 1]);
       }
       Matrix diff = a[n_lay - 1] - y;
       g[n_ops - 1] = ElementWise(SigmoidPrime(a[n_lay - 1]), diff);
@@ -172,9 +172,11 @@ public:
     for (size_t i = 0; i < n_lay; i++) {
       a.emplace_back(x.Rows(), d_[i]);
     }
+    Matrix ones(x.Rows(), 1);
+    ones.Ones();
     a[0] = x;
     for (size_t j = 1; j <= n_ops; j++) {
-      a[j] = Sigmoid(a[j - 1] * w_[j - 1] + b_[j - 1]);
+      a[j] = Sigmoid(a[j - 1] * w_[j - 1] + ones * b_[j - 1]);
     }
     return a[n_lay - 1];
   }
