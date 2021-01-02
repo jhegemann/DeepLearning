@@ -133,9 +133,8 @@ public:
   void Train(Matrix &x, Matrix &y, size_t epochs, NeuralOptimizer &optimizer) {
     std::vector<Matrix> a;
     std::vector<Matrix> g;
-    const int n_lay = d_.size();
     const int n_ops = d_.size() - 1;
-    for (size_t i = 0; i < n_lay; i++) {
+    for (size_t i = 0; i <= n_ops; i++) {
       a.emplace_back(x.Rows(), d_[i]);
     }
     for (size_t i = 1; i <= n_ops; i++) {
@@ -148,9 +147,9 @@ public:
       for (size_t j = 1; j <= n_ops; j++) {
         a[j] = Sigmoid(a[j - 1] * w_[j - 1] + ones * b_[j - 1]);
       }
-      Matrix diff = a[n_lay - 1] - y;
-      g[n_ops - 1] = ElementWise(SigmoidPrime(a[n_lay - 1]), diff);
-      double e = ElementWise(diff, diff).ReduceSum() / 2.0 / x.Rows();
+      Matrix d = a[n_ops] - y;
+      g[n_ops - 1] = ElementWise(SigmoidPrime(a[n_ops]), d);
+      double e = ElementWise(d, d).ReduceSum() / 2.0 / x.Rows();
       printf("%ld %e\n", i, e);
       for (int j = n_ops - 2; j >= 0; j--) {
         g[j] = ElementWise(SigmoidPrime(a[j + 1]), g[j + 1] * w_[j + 1].Transpose());
@@ -167,9 +166,8 @@ public:
 
   const Matrix Predict(Matrix &x) {
     std::vector<Matrix> a;
-    const int n_lay = d_.size();
     const int n_ops = d_.size() - 1;
-    for (size_t i = 0; i < n_lay; i++) {
+    for (size_t i = 0; i <= n_ops; i++) {
       a.emplace_back(x.Rows(), d_[i]);
     }
     Matrix ones(x.Rows(), 1);
@@ -178,7 +176,7 @@ public:
     for (size_t j = 1; j <= n_ops; j++) {
       a[j] = Sigmoid(a[j - 1] * w_[j - 1] + ones * b_[j - 1]);
     }
-    return a[n_lay - 1];
+    return a[n_ops];
   }
 
 private:

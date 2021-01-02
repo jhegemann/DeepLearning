@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   Matrix outputs(n, 1);
 
   for (size_t i = 0; i < n; i++) {
-    double a = (double) i / n * 2.0 * M_PI;
+    double a = (double) i / (double) (n - 1) * 2.0 * M_PI;
     inputs(i, 0) = a;
     outputs(i, 0) = 0.5 + 0.25 * sin(a);
   }
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   Matrix prediction = network.Predict(inputs);
   file << std::scientific;
   for (size_t i = 0; i < n; i++) {
-    file << (double) i / n * 2.0 * M_PI << " " << prediction(i, 0) << std::endl;
+    file << (double) i / (double) (n - 1) * 2.0 * M_PI << " " << prediction(i, 0) << std::endl;
   }
   file.close();
 
